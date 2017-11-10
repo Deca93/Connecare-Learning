@@ -1,5 +1,13 @@
 package client;
 
+import com.thoughtworks.xstream.XStream;
+import com.thoughtworks.xstream.security.AnyTypePermission;
+import database.DBManager;
+import database.FileManager;
+import model.Message;
+import model.interfaces.IMessage;
+import model.interfaces.IModel;
+import smile.classification.LogisticRegression;
 import smile.clustering.XMeans;
 import smile.data.AttributeDataset;
 import smile.data.NominalAttribute;
@@ -7,12 +15,19 @@ import smile.data.parser.DelimitedTextParser;
 import smile.mds.MDS;
 import smile.plot.PlotCanvas;
 import smile.plot.ScatterPlot;
+import utils.FileType;
 import utils.Matrix;
+import utils.Parser;
 import view.MainFrame;
 
+import javax.ws.rs.core.Response;
 import java.awt.*;
+import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.sql.Connection;
+import java.sql.SQLException;
 import java.text.ParseException;
 
 /**
@@ -21,7 +36,7 @@ import java.text.ParseException;
  */
 public class Main {
 
-    public static void main(String[] args) throws IOException, ParseException {
+    public static void main(String[] args) throws IOException, ParseException, SQLException {
         //testExample("src/test/data.csv", 2);
         testExample("src/test/note_auth.csv", 4);
     }

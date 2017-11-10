@@ -13,17 +13,24 @@ import org.glassfish.jersey.media.multipart.FormDataParam;
 import smile.classification.LogisticRegression;
 import smile.clustering.XMeans;
 import smile.data.AttributeDataset;
+import utils.CsvBuilder;
 import utils.FileType;
 import utils.Parser;
 
+import javax.print.attribute.standard.Media;
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.core.StreamingOutput;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.text.ParseException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -44,7 +51,7 @@ public class ModelResource {
         // TODO Async is better
         try {
             FileType fileType = FileType.getFileTypeFromExtension(fileDetail.getFileName());
-            AttributeDataset dataset = Parser.retrieveData(uploadedInputStream, fileType, responseIndex);
+            AttributeDataset dataset = Parser.retrieveTrainingData(uploadedInputStream, fileType, responseIndex);
 
             double[][] xData = dataset.toArray(new double[dataset.size()][]);
             int[] yData = dataset.toArray(new int[dataset.size()]);
@@ -92,9 +99,53 @@ public class ModelResource {
     @Path("{model-id}/apply")
     @POST
     @Consumes(MediaType.MULTIPART_FORM_DATA)
-    @Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
-    public Response apply(){
-        return null;
+    @Produces({MediaType.APPLICATION_OCTET_STREAM, MediaType.APPLICATION_JSON})
+    public Response apply(@FormDataParam("file") InputStream inputStream, @FormDataParam("file") FormDataContentDisposition fileDetail,
+                          @PathParam("model-id") String modelID){
+
+        AttributeDataset resultDataset = null;
+        byte[] csvFile = null;
+
+        try {
+            DBManager manager = new DBManager();
+            Connection connection = manager.getConnection();
+            IModel model = manager.getModelFromID(connection, modelID);
+            connection.close();
+
+            FileType fileType = FileType.getFileTypeFromExtension(fileDetail.getFileName());
+            AttributeDataset datasetTestingData = Parser.retrieveTestingData(inputStream, fileType);
+            AttributeDataset datasetTrainingData = FileManager.getTrainingData(modelID);
+
+            List<String> independentLabels = new ArrayList<>(Arrays.asList(model.getIndependentVariables().split(", ")));;
+            int numIndependentVariable = independentLabels.size();
+            double[][] testingData = datasetTestingData.toArray(new double[datasetTestingData.size()][]);
+
+            if(testingData.length < 1 || testingData[0].length != numIndependentVariable){
+                IMessage message = new Message(true, "No data or wrong independent variable!");
+                return Response.ok(message, MediaType.APPLICATION_JSON).build();
+            }
+
+            resultDataset = new AttributeDataset("Result Dataset", datasetTrainingData.attributes(), datasetTrainingData.response());
+
+            XMeans xMeans = FileManager.getClusterOfModel(modelID);
+            LogisticRegression[] classifiers = FileManager.getClassifiersOfModel(modelID);
+
+            for(int record=0; record<testingData.length; record++){
+                int clusterLabel = xMeans.predict(testingData[record]);
+                int y = classifiers[clusterLabel].predict(testingData[record]);
+                resultDataset.add(testingData[record], y);
+            }
+
+            csvFile = CsvBuilder.createCsv(independentLabels, resultDataset.toArray(new double[testingData.length][]),
+                    resultDataset.toArray(new int[testingData.length]));
+
+        } catch (IOException | ParseException | SQLException e) {
+            e.printStackTrace();
+            IMessage message = new Message(true, e.getMessage());
+            return Response.ok(message, MediaType.APPLICATION_JSON).build();
+        }
+
+        return Response.ok(getFileOutputStream(csvFile), MediaType.APPLICATION_OCTET_STREAM).build();
     }
 
     @Path("{model-id}/retrain")
@@ -186,6 +237,20 @@ public class ModelResource {
         return Response.ok().entity(message).build();
     }
 
+    @Path("{model-id}/download")
+    @GET
+    //@Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
+    public Response downloadModel(@PathParam("model-id") String oldModelID){
+        // TODO zip and download
+        /*return Response
+                .ok(FileUtils.readFileToByteArray(file))
+                .type("application/zip")
+                .header("Content-Disposition", "attachment; filename=\"filename.zip\"")
+                .build();*/
+        IMessage message = new Message(false, "Done");
+        return Response.ok().entity(message).build();
+    }
+
     @Path("{model-id}/delete")
     @DELETE
     @Produces({MediaType.APPLICATION_JSON, MediaType.APPLICATION_XML})
@@ -206,6 +271,15 @@ public class ModelResource {
 
         IMessage message = new Message(false, "Done");
         return Response.ok().entity(message).build();
+    }
+
+    private StreamingOutput getFileOutputStream(byte[] excelBytes) {
+        return new StreamingOutput() {
+            @Override
+            public void write(OutputStream out) throws IOException, WebApplicationException {
+                out.write(excelBytes);
+            }
+        };
     }
 
 }

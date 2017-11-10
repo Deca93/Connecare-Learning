@@ -34,6 +34,7 @@ public class Main {
             Thread.currentThread().join();
         } catch (IOException | InterruptedException ex) {
             Logger.getLogger(Main.class.getName()).log(Level.SEVERE, null, ex);
+            ex.printStackTrace();
         }
     }
 

@@ -1,6 +1,10 @@
 package database;
 
 import com.thoughtworks.xstream.XStream;
+import com.thoughtworks.xstream.converters.SingleValueConverter;
+import com.thoughtworks.xstream.converters.extended.JavaClassConverter;
+import com.thoughtworks.xstream.core.ClassLoaderReference;
+import com.thoughtworks.xstream.security.AnyTypePermission;
 import exception.CreatingFileException;
 import org.apache.commons.io.FileUtils;
 import smile.classification.LogisticRegression;
@@ -28,12 +32,40 @@ public class FileManager {
 
         OutputStream osDataset = new FileOutputStream(MODELS_DIR + File.separator + modelID + File.separator + "dataset.xml");
         OutputStream osCluster = new FileOutputStream(MODELS_DIR + File.separator + modelID + File.separator + "cluster.xml");
-        OutputStream osClassification = new FileOutputStream(MODELS_DIR + File.separator + modelID + File.separator + "classification.xml");
+        OutputStream osClassifiers = new FileOutputStream(MODELS_DIR + File.separator + modelID + File.separator + "classifiers.xml");
 
         XStream xStream = new XStream();
         xStream.toXML(dataset, osDataset);
         xStream.toXML(xMeans, osCluster);
-        xStream.toXML(logisticRegressions, osClassification);
+        xStream.toXML(logisticRegressions, osClassifiers);
+    }
+
+    public static XMeans getClusterOfModel(String modelID){
+        XStream xStream = new XStream();
+        XStream.setupDefaultSecurity(xStream);
+        xStream.allowTypes(new Class[]{XMeans.class});
+        File file = new File(MODELS_DIR + File.separator + modelID + File.separator + "cluster.xml");
+        XMeans xMeans = (XMeans) xStream.fromXML(file);
+        return xMeans;
+    }
+
+    public static LogisticRegression[] getClassifiersOfModel(String modelID){
+        XStream xStream = new XStream();
+        XStream.setupDefaultSecurity(xStream);
+        xStream.allowTypes(new Class[]{LogisticRegression.class});
+        File file = new File(MODELS_DIR + File.separator + modelID + File.separator + "classifiers.xml");
+        LogisticRegression[] classifiers = (LogisticRegression[]) xStream.fromXML(file);
+        return classifiers;
+    }
+
+    public static AttributeDataset getTrainingData(String modelID){
+        XStream xStream = new XStream();
+        XStream.setupDefaultSecurity(xStream);
+        xStream.addPermission(AnyTypePermission.ANY);
+        //xStream.allowTypes(new Class[]{AttributeDataset.class});
+        File file = new File(MODELS_DIR + File.separator + modelID + File.separator + "dataset.xml");
+        AttributeDataset dataset = (AttributeDataset) xStream.fromXML(file);
+        return dataset;
     }
 
     public static void snapshotModelFolder(String oldModelID, String newModelID) throws IOException {
