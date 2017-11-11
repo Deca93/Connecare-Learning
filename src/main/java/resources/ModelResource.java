@@ -3,21 +3,27 @@ package resources;
 import database.DBManager;
 import database.FileManager;
 import exception.CreatingFileException;
-import learning.Trainer;
+import learning.ClusterType;
+import learning.DataModelMerger;
+import learning.ModelApplier;
+import learning.ModelTrainer;
+import learning.interfaces.IApplier;
+import learning.interfaces.IMerger;
+import learning.interfaces.ITrainer;
 import model.Message;
-import model.Pair;
 import model.interfaces.IMessage;
 import model.interfaces.IModel;
 import org.glassfish.jersey.media.multipart.FormDataContentDisposition;
 import org.glassfish.jersey.media.multipart.FormDataParam;
+import org.w3c.dom.Attr;
 import smile.classification.LogisticRegression;
-import smile.clustering.XMeans;
+import smile.clustering.PartitionClustering;
 import smile.data.AttributeDataset;
 import utils.CsvBuilder;
 import utils.FileType;
 import utils.Parser;
+import utils.interfaces.IParser;
 
-import javax.print.attribute.standard.Media;
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
@@ -28,8 +34,6 @@ import java.io.OutputStream;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.text.ParseException;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 
@@ -51,32 +55,34 @@ public class ModelResource {
         // TODO Async is better
         try {
             FileType fileType = FileType.getFileTypeFromExtension(fileDetail.getFileName());
-            AttributeDataset dataset = Parser.retrieveTrainingData(uploadedInputStream, fileType, responseIndex);
 
-            double[][] xData = dataset.toArray(new double[dataset.size()][]);
-            int[] yData = dataset.toArray(new int[dataset.size()]);
+            // Parse the file and retrieve data for training
+            IParser parser = new Parser(uploadedInputStream, fileType, responseIndex);
+            AttributeDataset dataset = parser.parse();
 
-            String xVariables = "";
-            String yVariable = dataset.response().getName().replaceAll("\"", "");
-            for(int i=0; i<dataset.attributes().length; i++){
-                xVariables += dataset.attributes()[i].getName();
-                if(i<dataset.attributes().length - 1){
-                    xVariables += ", ";
-                }
-            }
-            xVariables = xVariables.replaceAll("\"", "");
+            // Retrieve columns name of the training file
+            String independentVariablesLabels = parser.getIndependentVariablesToString();
+            String dependentVariableLabel = parser.getDependentVariable();
 
-            Pair<XMeans,LogisticRegression[]> result = Trainer.train(xData, yData);
+            double[][] independentVariables = dataset.toArray(new double[dataset.size()][]);
+            int[] dependentVariables = dataset.toArray(new int[dataset.size()]);
 
+            // Training a model with a specific clustering and Logistic regression
+            ITrainer trainer = new ModelTrainer(independentVariables, dependentVariables, ClusterType.XMEANS);
+            PartitionClustering<double[]> clustering = trainer.getClustering();
+            LogisticRegression[] classifiers = trainer.getClassifiers();
+
+            // Create new model id and save it into a database
             String modelID = UUID.randomUUID().toString();
-            DBManager manager = new DBManager();
-            Connection connection = manager.getConnection();
-            manager.saveNewModel(connection, modelID, "modelName", "clinic-00", "description",
-                    xVariables, yVariable);
+            DBManager dbmanager = new DBManager();
+            Connection connection = dbmanager.getConnection();
+            dbmanager.saveNewModel(connection, modelID, modelName, "clinic-00", description,
+                    independentVariablesLabels, dependentVariableLabel);
 
             connection.close();
 
-            FileManager.saveNewModel(modelID, dataset, result.getFirst(), result.getSecond());
+            // Save the model on file
+            FileManager.saveNewModel(modelID, dataset, clustering, classifiers);
 
         } catch (IOException | SQLException | ParseException | CreatingFileException e) {
             e.printStackTrace();
@@ -103,20 +109,24 @@ public class ModelResource {
     public Response apply(@FormDataParam("file") InputStream inputStream, @FormDataParam("file") FormDataContentDisposition fileDetail,
                           @PathParam("model-id") String modelID){
 
-        AttributeDataset resultDataset = null;
         byte[] csvFile = null;
 
         try {
+
+            // Retrieve model information from database
             DBManager manager = new DBManager();
             Connection connection = manager.getConnection();
             IModel model = manager.getModelFromID(connection, modelID);
             connection.close();
 
+            // Parse testing data
             FileType fileType = FileType.getFileTypeFromExtension(fileDetail.getFileName());
-            AttributeDataset datasetTestingData = Parser.retrieveTestingData(inputStream, fileType);
+            Parser parser = new Parser(inputStream, fileType);
+
+            AttributeDataset datasetTestingData = parser.parse();
             AttributeDataset datasetTrainingData = FileManager.getTrainingData(modelID);
 
-            List<String> independentLabels = new ArrayList<>(Arrays.asList(model.getIndependentVariables().split(", ")));;
+            List<String> independentLabels = parser.getIndependentVariables();
             int numIndependentVariable = independentLabels.size();
             double[][] testingData = datasetTestingData.toArray(new double[datasetTestingData.size()][]);
 
@@ -125,21 +135,34 @@ public class ModelResource {
                 return Response.ok(message, MediaType.APPLICATION_JSON).build();
             }
 
-            resultDataset = new AttributeDataset("Result Dataset", datasetTrainingData.attributes(), datasetTrainingData.response());
-
-            XMeans xMeans = FileManager.getClusterOfModel(modelID);
+            PartitionClustering<double[]> clustering = FileManager.getClusterOfModel(modelID);
             LogisticRegression[] classifiers = FileManager.getClassifiersOfModel(modelID);
 
-            for(int record=0; record<testingData.length; record++){
-                int clusterLabel = xMeans.predict(testingData[record]);
-                int y = classifiers[clusterLabel].predict(testingData[record]);
-                resultDataset.add(testingData[record], y);
-            }
+            IApplier applier = new ModelApplier(datasetTrainingData, clustering, classifiers);
+            AttributeDataset resultDataset = applier.apply(testingData);
 
             csvFile = CsvBuilder.createCsv(independentLabels, resultDataset.toArray(new double[testingData.length][]),
                     resultDataset.toArray(new int[testingData.length]));
 
-        } catch (IOException | ParseException | SQLException e) {
+            if(model.isTrainable() && model.isOnlineTrainable()){
+                // Merge the dataset
+                IMerger merger = new DataModelMerger();
+                AttributeDataset mergedDataset = merger.merge(datasetTrainingData, resultDataset);
+
+                double[][] xMerged = mergedDataset.toArray(new double[mergedDataset.size()][]);
+                int[] yMerged = mergedDataset.toArray(new int[mergedDataset.size()]);
+
+                // Retrain the model with merged data
+                ITrainer mergedTrainer = new ModelTrainer(xMerged, yMerged, ClusterType.XMEANS);
+                PartitionClustering<double[]> mergedClustering = mergedTrainer.getClustering();
+                LogisticRegression[] mergedClassifiers = mergedTrainer.getClassifiers();
+
+                // Save the model on file
+                FileManager.replaceModel(modelID, mergedDataset, mergedClustering, mergedClassifiers);
+                // TODO aggiornare data di last update
+            }
+
+        } catch (IOException | ParseException | SQLException | CreatingFileException e) {
             e.printStackTrace();
             IMessage message = new Message(true, e.getMessage());
             return Response.ok(message, MediaType.APPLICATION_JSON).build();

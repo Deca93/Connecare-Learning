@@ -4,10 +4,18 @@ import com.thoughtworks.xstream.XStream;
 import com.thoughtworks.xstream.security.AnyTypePermission;
 import database.DBManager;
 import database.FileManager;
+import learning.ClusterType;
+import learning.DataModelMerger;
+import learning.ModelApplier;
+import learning.ModelTrainer;
+import learning.interfaces.IApplier;
+import learning.interfaces.IMerger;
+import learning.interfaces.ITrainer;
 import model.Message;
 import model.interfaces.IMessage;
 import model.interfaces.IModel;
 import smile.classification.LogisticRegression;
+import smile.clustering.PartitionClustering;
 import smile.clustering.XMeans;
 import smile.data.AttributeDataset;
 import smile.data.NominalAttribute;
@@ -20,15 +28,14 @@ import utils.Matrix;
 import utils.Parser;
 import view.MainFrame;
 
+import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.awt.*;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
+import java.io.*;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.text.ParseException;
+import java.util.*;
 
 /**
  * Created by Andrea De Castri on 09/11/2017.
@@ -38,7 +45,37 @@ public class Main {
 
     public static void main(String[] args) throws IOException, ParseException, SQLException {
         //testExample("src/test/data.csv", 2);
-        testExample("src/test/note_auth.csv", 4);
+        //testExample("src/test/note_auth.csv", 4);
+        test();
+    }
+
+    private static void test() throws IOException, ParseException {
+        InputStream is = new FileInputStream("C:\\Users\\Andrea\\Desktop\\Connecare\\DataForTesting\\testing_0.csv");
+        FileType fileType = FileType.getFileTypeFromExtension("testing_0.csv");
+        Parser parser = new Parser(is, fileType);
+
+        AttributeDataset datasetTestingData = parser.parse();
+        AttributeDataset datasetTrainingData = FileManager.getTrainingData("c650a2bd-91f2-4f87-962e-da6dd0f55e7e");
+
+        java.util.List<String> independentLabels = parser.getIndependentVariables();
+        int numIndependentVariable = independentLabels.size();
+        double[][] testingData = datasetTestingData.toArray(new double[datasetTestingData.size()][]);
+
+        PartitionClustering<double[]> clustering = FileManager.getClusterOfModel("c650a2bd-91f2-4f87-962e-da6dd0f55e7e");
+        LogisticRegression[] classifiers = FileManager.getClassifiersOfModel("c650a2bd-91f2-4f87-962e-da6dd0f55e7e");
+
+        IApplier applier = new ModelApplier(datasetTrainingData, clustering, classifiers);
+        AttributeDataset resultDataset = applier.apply(testingData);
+
+        IMerger merger = new DataModelMerger();
+        AttributeDataset mergedDataset = merger.merge(datasetTrainingData, resultDataset);
+
+        double[][] xMerged = mergedDataset.toArray(new double[mergedDataset.size()][]);
+        int[] yMerged = mergedDataset.toArray(new int[mergedDataset.size()]);
+
+        ITrainer mergedTrainer = new ModelTrainer(xMerged, yMerged, ClusterType.XMEANS);
+        PartitionClustering<double[]> mergedClustering = mergedTrainer.getClustering();
+        LogisticRegression[] mergedClassifiers = mergedTrainer.getClassifiers();
     }
 
     private static void testExample(String path, int responseIndex) throws IOException, ParseException {

@@ -74,7 +74,7 @@
         </dependency>
 
         <!-- Per XML -->
-        <!--<dependency>
+        <dependency>
             <groupId>org.codehaus.woodstox</groupId>
             <artifactId>woodstox-core-asl</artifactId>
             <version>4.4.1</version>
@@ -96,7 +96,7 @@
             <groupId>org.glassfish.jersey.media</groupId>
             <artifactId>jersey-media-json-binding</artifactId>
             <version>2.26</version>
-        </dependency>-->
+        </dependency>
 
         <dependency>
             <groupId>org.glassfish.jersey.media</groupId>

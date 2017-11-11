@@ -8,6 +8,7 @@ import com.thoughtworks.xstream.security.AnyTypePermission;
 import exception.CreatingFileException;
 import org.apache.commons.io.FileUtils;
 import smile.classification.LogisticRegression;
+import smile.clustering.PartitionClustering;
 import smile.clustering.XMeans;
 import smile.data.AttributeDataset;
 
@@ -22,7 +23,7 @@ public class FileManager {
     private static final String MODELS_DIR = "C:" + File.separator + "Users" + File.separator + "Andrea" + File.separator +
             "Desktop" + File.separator + "Connecare"+ File.separator + "Models";
 
-    public static void saveNewModel(String modelID, AttributeDataset dataset, XMeans xMeans,
+    public static void saveNewModel(String modelID, AttributeDataset dataset, PartitionClustering<double[]> clustering,
                                     LogisticRegression[] logisticRegressions) throws CreatingFileException, FileNotFoundException {
 
         boolean dirCreated = createModelDir(modelID);
@@ -36,16 +37,29 @@ public class FileManager {
 
         XStream xStream = new XStream();
         xStream.toXML(dataset, osDataset);
-        xStream.toXML(xMeans, osCluster);
+        xStream.toXML(clustering, osCluster);
         xStream.toXML(logisticRegressions, osClassifiers);
     }
 
-    public static XMeans getClusterOfModel(String modelID){
+    public static void replaceModel(String modelID, AttributeDataset dataset, PartitionClustering<double[]> clustering,
+                               LogisticRegression[] logisticRegressions) throws CreatingFileException, FileNotFoundException{
+
+        OutputStream osDataset = new FileOutputStream(MODELS_DIR + File.separator + modelID + File.separator + "dataset.xml");
+        OutputStream osCluster = new FileOutputStream(MODELS_DIR + File.separator + modelID + File.separator + "cluster.xml");
+        OutputStream osClassifiers = new FileOutputStream(MODELS_DIR + File.separator + modelID + File.separator + "classifiers.xml");
+
+        XStream xStream = new XStream();
+        xStream.toXML(dataset, osDataset);
+        xStream.toXML(clustering, osCluster);
+        xStream.toXML(logisticRegressions, osClassifiers);
+    }
+
+    public static PartitionClustering<double[]> getClusterOfModel(String modelID){
         XStream xStream = new XStream();
         XStream.setupDefaultSecurity(xStream);
         xStream.allowTypes(new Class[]{XMeans.class});
         File file = new File(MODELS_DIR + File.separator + modelID + File.separator + "cluster.xml");
-        XMeans xMeans = (XMeans) xStream.fromXML(file);
+        PartitionClustering<double[]> xMeans = (PartitionClustering<double[]>) xStream.fromXML(file);
         return xMeans;
     }
 
