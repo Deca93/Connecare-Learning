@@ -17,7 +17,7 @@ public class DataModelMerger implements IMerger {
 
     @Override
     public AttributeDataset merge(AttributeDataset first, AttributeDataset second) {
-        AttributeDataset result = new AttributeDataset(MERGED_DATASET, first.attributes(), first.response());
+        AttributeDataset result = new AttributeDataset(MERGED_DATASET, first.attributes(), first.response().attribute());
 
         double[][] xFirst = first.toArray(new double[first.size()][first.attributes().length]);
         int[] yFirst = first.toArray(new int[first.size()]);

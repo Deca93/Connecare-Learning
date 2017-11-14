@@ -4,7 +4,11 @@ import model.Model;
 import model.interfaces.IModel;
 
 import java.sql.*;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 
 /**
  * Created by Andrea De Castri on 09/11/2017.
@@ -12,9 +16,11 @@ import java.util.Date;
  */
 public class DBManager {
 
+    private static SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+
     private static final String URL = "jdbc:mysql://localhost:3306/osteolab?useSSL=false";
     private static final String USER = "root";
-    private static final String PASSWORD = "root";
+    private static final String PASSWORD = "";
 
 
     public DBManager(){
@@ -123,6 +129,42 @@ public class DBManager {
         stmt.close();
 
         return numRows == 1;
+    }
+
+    public List<Model> getModels(Connection connection) throws SQLException {
+        String sql = "SELECT C.name AS clinic, M.* FROM CLINIC C, MODEL M WHERE C.id = M.providerId";
+        PreparedStatement stmt = connection.prepareStatement(sql);
+
+        ResultSet rs = stmt.executeQuery();
+        List<Model> list = new ArrayList<>();
+        while (rs.next()){
+            String modelID = rs.getString("id");
+            String name = rs.getString("name");
+            String providerID = rs.getString("providerId");
+            String provider = rs.getString("clinic");
+            String description = rs.getString("description");
+            String xVariables = rs.getString("xVariables");
+            String yVariable = rs.getString("yVariable");
+            boolean trainable = rs.getBoolean("trainable");
+            boolean globalAccess = rs.getBoolean("globalAccess");
+            boolean onlineLearning = rs.getBoolean("onlineTrainable");
+            String creationDateString = rs.getString("creationDate");
+            String lastUpdateString = rs.getString("lastUpdate");
+            Date creationDate = null;
+            Date lastUpdate = null;
+            try {
+                creationDate = dateFormat.parse(creationDateString);
+                lastUpdate = dateFormat.parse(lastUpdateString);
+            } catch (ParseException e) {
+                e.printStackTrace();
+            }
+
+            Model model = new Model(modelID, name, providerID, provider, description, xVariables, yVariable, trainable,
+                    globalAccess, onlineLearning, creationDate, lastUpdate);
+            list.add(model);
+        }
+
+        return list;
     }
 
 }

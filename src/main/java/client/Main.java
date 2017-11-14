@@ -45,37 +45,7 @@ public class Main {
 
     public static void main(String[] args) throws IOException, ParseException, SQLException {
         //testExample("src/test/data.csv", 2);
-        //testExample("src/test/note_auth.csv", 4);
-        test();
-    }
-
-    private static void test() throws IOException, ParseException {
-        InputStream is = new FileInputStream("C:\\Users\\Andrea\\Desktop\\Connecare\\DataForTesting\\testing_0.csv");
-        FileType fileType = FileType.getFileTypeFromExtension("testing_0.csv");
-        Parser parser = new Parser(is, fileType);
-
-        AttributeDataset datasetTestingData = parser.parse();
-        AttributeDataset datasetTrainingData = FileManager.getTrainingData("c650a2bd-91f2-4f87-962e-da6dd0f55e7e");
-
-        java.util.List<String> independentLabels = parser.getIndependentVariables();
-        int numIndependentVariable = independentLabels.size();
-        double[][] testingData = datasetTestingData.toArray(new double[datasetTestingData.size()][]);
-
-        PartitionClustering<double[]> clustering = FileManager.getClusterOfModel("c650a2bd-91f2-4f87-962e-da6dd0f55e7e");
-        LogisticRegression[] classifiers = FileManager.getClassifiersOfModel("c650a2bd-91f2-4f87-962e-da6dd0f55e7e");
-
-        IApplier applier = new ModelApplier(datasetTrainingData, clustering, classifiers);
-        AttributeDataset resultDataset = applier.apply(testingData);
-
-        IMerger merger = new DataModelMerger();
-        AttributeDataset mergedDataset = merger.merge(datasetTrainingData, resultDataset);
-
-        double[][] xMerged = mergedDataset.toArray(new double[mergedDataset.size()][]);
-        int[] yMerged = mergedDataset.toArray(new int[mergedDataset.size()]);
-
-        ITrainer mergedTrainer = new ModelTrainer(xMerged, yMerged, ClusterType.XMEANS);
-        PartitionClustering<double[]> mergedClustering = mergedTrainer.getClustering();
-        LogisticRegression[] mergedClassifiers = mergedTrainer.getClassifiers();
+        testExample("src/test/note_auth.csv", 4);
     }
 
     private static void testExample(String path, int responseIndex) throws IOException, ParseException {

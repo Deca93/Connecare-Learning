@@ -104,7 +104,7 @@ public class Parser implements IParser {
             this.independentVariables.add(name);
         }
         if(this.responseIndex != -1){
-            this.dependentVariable = dataset.response().getName().replaceAll("\"", "");;
+            this.dependentVariable = dataset.response().attribute().getName().replaceAll("\"", "");;
         }
     }
 

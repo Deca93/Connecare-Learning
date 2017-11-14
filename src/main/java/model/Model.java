@@ -1,7 +1,11 @@
 package model;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import model.interfaces.IModel;
 
+import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -12,9 +16,8 @@ import java.util.Date;
  *
  */
 @XmlRootElement(name = "model")
+@XmlAccessorType(XmlAccessType.FIELD)
 public class Model implements IModel{
-
-    private static SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
     private String id;
     private String name;
@@ -48,61 +51,73 @@ public class Model implements IModel{
     }
 
     @Override
+    @JsonProperty("id")
     public String getId(){
         return this.id;
     }
 
     @Override
+    @JsonProperty("name")
     public String getName() {
         return this.name;
     }
 
     @Override
+    @JsonProperty("providerId")
     public String getProviderId() {
         return this.providerId;
     }
 
     @Override
+    @JsonProperty("provider")
     public String getProvider(){
         return this.provider;
     }
 
     @Override
+    @JsonProperty("description")
     public String getDescription(){
         return this.description;
     }
 
     @Override
+    @JsonProperty("independentVariables")
     public String getIndependentVariables() {
         return this.xVariables;
     }
 
     @Override
+    @JsonProperty("dependentVariable")
     public String getDependentVariable() {
         return this.yVariable;
     }
 
     @Override
+    @JsonProperty("trainable")
     public boolean isTrainable() {
         return this.isTrainable;
     }
 
     @Override
-    public boolean hasGlobalAccess() {
+    @JsonProperty("globalAccess")
+    public boolean getGlobalAccess() {
         return this.hasGlobalAccess;
     }
 
     @Override
+    @JsonProperty("onlineTrainable")
     public boolean isOnlineTrainable() {
         return this.isOnlineTrainable;
     }
 
     @Override
+    @JsonProperty("creationDate")
     public Date getCreationDate() {
         return this.creationDate;
     }
 
     @Override
+    @JsonProperty("lastUpdate")
     public Date getLastUpdateDate() {
         return this.lastUpdateDate;
     }

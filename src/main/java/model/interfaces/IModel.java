@@ -60,7 +60,7 @@ public interface IModel {
      * Returns the flag for global access to the model
      * @return True if the model can be used/trained from everyone
      */
-    boolean hasGlobalAccess();
+    boolean getGlobalAccess();
 
     /**
      * Indicates if the model is trainable with new data

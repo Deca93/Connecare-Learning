@@ -24,7 +24,7 @@ public class FileManager {
             "Desktop" + File.separator + "Connecare"+ File.separator + "Models";
 
     public static void saveNewModel(String modelID, AttributeDataset dataset, PartitionClustering<double[]> clustering,
-                                    LogisticRegression[] logisticRegressions) throws CreatingFileException, FileNotFoundException {
+                                    LogisticRegression[] logisticRegressions) throws CreatingFileException, IOException {
 
         boolean dirCreated = createModelDir(modelID);
         if(!dirCreated){
@@ -39,6 +39,10 @@ public class FileManager {
         xStream.toXML(dataset, osDataset);
         xStream.toXML(clustering, osCluster);
         xStream.toXML(logisticRegressions, osClassifiers);
+
+        osDataset.close();
+        osCluster.close();
+        osClassifiers.close();
     }
 
     public static void replaceModel(String modelID, AttributeDataset dataset, PartitionClustering<double[]> clustering,
@@ -97,6 +101,14 @@ public class FileManager {
     private static boolean createModelDir(String modelID){
         File newDirectory = new File(MODELS_DIR + File.separator + modelID);
         return newDirectory.mkdir();
+    }
+
+    public static File getClusteringFileOfModel(String modelID){
+        return new File(MODELS_DIR + File.separator + modelID + File.separator + "cluster.xml");
+    }
+
+    public static File getClassifiersFileOfModel(String modelID){
+        return new File(MODELS_DIR + File.separator + modelID + File.separator + "classifiers.xml");
     }
 
 }

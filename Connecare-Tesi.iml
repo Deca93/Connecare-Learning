@@ -20,11 +20,11 @@
         <SOURCES />
       </library>
     </orderEntry>
-    <orderEntry type="library" name="Maven: com.github.haifengl:smile-core:1.4.0" level="project" />
-    <orderEntry type="library" name="Maven: com.github.haifengl:smile-data:1.4.0" level="project" />
-    <orderEntry type="library" name="Maven: com.github.haifengl:smile-math:1.4.0" level="project" />
-    <orderEntry type="library" name="Maven: com.github.haifengl:smile-graph:1.4.0" level="project" />
-    <orderEntry type="library" name="Maven: com.github.haifengl:smile-plot:1.4.0" level="project" />
+    <orderEntry type="library" name="Maven: com.github.haifengl:smile-core:1.5.0" level="project" />
+    <orderEntry type="library" name="Maven: com.github.haifengl:smile-data:1.5.0" level="project" />
+    <orderEntry type="library" name="Maven: com.github.haifengl:smile-math:1.5.0" level="project" />
+    <orderEntry type="library" name="Maven: com.github.haifengl:smile-graph:1.5.0" level="project" />
+    <orderEntry type="library" name="Maven: com.github.haifengl:smile-plot:1.5.0" level="project" />
     <orderEntry type="library" name="Maven: org.swinglabs:swingx:1.6.1" level="project" />
     <orderEntry type="library" name="Maven: com.jhlabs:filters:2.0.235" level="project" />
     <orderEntry type="library" name="Maven: org.swinglabs:swing-worker:1.1" level="project" />

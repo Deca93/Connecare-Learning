@@ -9,6 +9,8 @@ import resources.ModelsResource;
 
 import java.io.IOException;
 import java.net.URI;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -25,7 +27,11 @@ public class Main {
         try {
             System.out.println("Connecare-learning starts!");
 
-            final ResourceConfig resourceConfig = new ResourceConfig(ModelResource.class);
+            Set<Class<?>> set = new HashSet<>();
+            set.add(ModelResource.class);
+            set.add(ModelsResource.class);
+
+            final ResourceConfig resourceConfig = new ResourceConfig(set);
             resourceConfig.register(MultiPartFeature.class);
             final HttpServer server = GrizzlyHttpServerFactory.createHttpServer(BASE_URI,resourceConfig,false);
             Runtime.getRuntime().addShutdownHook(new Thread(() -> server.shutdownNow()));

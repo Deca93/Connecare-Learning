@@ -26,7 +26,7 @@ public class ModelApplier implements IApplier {
 
     @Override
     public AttributeDataset apply(double[][] data) {
-        AttributeDataset resultDataset = new AttributeDataset(TITLE, this.trainingData.attributes(), this.trainingData.response());
+        AttributeDataset resultDataset = new AttributeDataset(TITLE, this.trainingData.attributes(), this.trainingData.response().attribute());
         for(int record=0; record<data.length; record++){
             int clusterLabel = clustering.predict(data[record]);
             int y = classifiers[clusterLabel].predict(data[record]);
